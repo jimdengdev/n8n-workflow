@@ -1,0 +1,346 @@
+{
+  "name": "AI热榜简报-定时推送",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -64
+      ],
+      "id": "114bc8c5-6728-4ea2-8187-3891053cb6b2",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "url": "https://api.juejin.cn/content_api/v1/content/article_rank?category_id=6809637773935378440&type=hot&aid=2608&uuid=6963437645070976542&spider=1",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        224,
+        0
+      ],
+      "id": "82b9ab86-a78b-4c5a-ba76-b464847d548c",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.data }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "=你是一个擅长总结长文本的助手，能够总结用户给出的文章，请根据下方的文章内容做三件事：\n\n1. **文章摘要**  \n   清晰、简洁地总结内容，在3-4句话内吸引读者。\n\n2. **文章评分（1-100）-重要**  \n   严格评估文章内容，不考虑类别，但根据以下标准：\n\n   - **重要性和影响（最高30分）**  \n     对公众有影响或具有长期政策影响的文章\n   - **新内容和信息（最高25分）**  \n     提供新信息、新观点或深入背景的文章\n   - **报道质量（最高25分）**  \n     写作清晰、有引用、有结构，不仅仅是报道文章\n   - **报道的吸引力（最高20分）**  \n     生动有趣，有细节或与当前事件相关\n\n   **立即扣分** 如果发现以下情况：\n   - 广告/宣传文章（-20至-30分）\n   - 内容陈旧、重复的新闻文章（-10至-20分）\n   - 缺乏来源或使用模糊语言的文章（-10分）\n\n3. **文章标签**  \n\t 阅读文章内容后给文章打上标签，标签通常是领域、学科或专有名词，要求 2-5 个\n\n---\n文章内容：\n{{ $json.data }}\n\n---\n输出格式：\n请严格以JSON格式回答，需包含以下key：\n{\n     \n  \"title\": \"xxxx\"\n\"abstract\": \"xxx\"\n  \"source\": \"https://juejin.cn/post/7560167720013692974\" \n  \"score\": \"75\"\n  \"tags\": \"AIGC,Python\"\n}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        1360,
+        0
+      ],
+      "id": "a9c29190-862a-4030-bea3-07e7d142d925",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "data",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        448,
+        0
+      ],
+      "id": "ebed08b2-d5fd-45cf-abe8-5a90ed008020",
+      "name": "Split Out"
+    },
+    {
+      "parameters": {
+        "fromEmail": "jimdengdev@qq.com",
+        "toEmail": "jimdengdev@qq.com",
+        "subject": "AI热榜简报",
+        "html": "={{ $json.output}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        2224,
+        0
+      ],
+      "id": "7849d305-ddc7-4209-90a6-b6a6bc780295",
+      "name": "Send email",
+      "webhookId": "d585465d-e879-41e0-a79b-1d8b1d6a0158",
+      "credentials": {
+        "smtp": {
+          "id": "VlOr5Mx0rZ29suWr",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "=hours",
+              "hoursInterval": 8
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        80
+      ],
+      "id": "3093663f-097e-4e93-8a49-466af870d40d",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+          "mode": "list",
+          "cachedResultName": "Qwen/Qwen3-30B-A3B-Instruct-2507"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        1408,
+        288
+      ],
+      "id": "ee6d8906-b108-4f32-941f-61ea4cef6d14",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "3fW4Fabi1qymezFq",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=http://192.168.31.51:3000/https://juejin.cn/post/{{ $json.content.content_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-timeout",
+              "value": "3000000"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1104,
+        0
+      ],
+      "id": "5d71979d-e2da-470f-a871-bd2efa398965",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// const outputStr = $input.first().json.output;\n// // Remove the code block markers and parse the JSON\n// const jsonOne = outputStr.trim();\n// const jsonStr = jsonOne.replace(/^```json\\n|```$/g, '').trim();\n// const data = JSON.parse(jsonStr);\n\n// return [{\n//   json: {\n//     headline: data.headline,\n//     summary: data.summary,\n//     score: data.score,\n//     category: data.category\n//   }\n// }];\n\n// 提取并解析每个 output 中的 JSON\nconst result = $input.all().map(item => {\n    // 移除可能存在的 markdown 代码块标记\n    let jsonStr = item.json.output.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\n    \n    // 解析 JSON 字符串\n    return JSON.parse(jsonStr);\n});\n\nreturn result"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1744,
+        0
+      ],
+      "id": "e484a991-6077-4955-8461-01b3c7acd9c4",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "jsCode": "function convertToEmailHTML(articles) {\n  // 处理 tags，统一转换为字符串\n  const formatTags = (tags) => {\n    if (Array.isArray(tags)) {\n      return tags.join(', ');\n    }\n    return tags;\n  };\n\n  // 根据分数返回不同颜色\n  const getScoreColor = (score) => {\n    if (score >= 90) return '#10b981'; // 绿色\n    if (score >= 80) return '#3b82f6'; // 蓝色\n    if (score >= 70) return '#f59e0b'; // 橙色\n    return '#ef4444'; // 红色\n  };\n\n  const htmlContent = `\n<!DOCTYPE html>\n<html lang=\"zh-CN\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n    <title>精选文章推荐</title>\n</head>\n<body style=\"margin: 0; padding: 0; background-color: #f3f4f6; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;\">\n    <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background-color: #f3f4f6; padding: 20px 0;\">\n        <tr>\n            <td align=\"center\">\n                <table width=\"600\" cellpadding=\"0\" cellspacing=\"0\" style=\"background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);\">\n                    <!-- Header -->\n                    <tr>\n                        <td style=\"background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 8px 8px 0 0;\">\n                            <h1 style=\"margin: 0; color: #ffffff; font-size: 28px; font-weight: 600;\">📚 精选文章推荐</h1>\n                            <p style=\"margin: 10px 0 0 0; color: #e0e7ff; font-size: 14px;\">为您精心挑选的优质内容</p>\n                        </td>\n                    </tr>\n                    \n                    <!-- Content -->\n                    <tr>\n                        <td style=\"padding: 30px;\">\n                            ${articles.map((article, index) => `\n                            <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin-bottom: ${index < articles.length - 1 ? '25px' : '0'}; border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;\">\n                                <tr>\n                                    <td style=\"padding: 20px; background-color: #fafafa;\">\n                                        <!-- Title -->\n                                        <h2 style=\"margin: 0 0 12px 0; font-size: 18px; font-weight: 600; color: #1f2937;\">\n                                            <a href=\"${article.json.source}\" style=\"color: #1f2937; text-decoration: none;\" target=\"_blank\">\n                                                ${article.json.title}\n                                            </a>\n                                        </h2>\n                                        \n                                        <!-- Summary -->\n                                        <p style=\"margin: 0 0 15px 0; color: #4b5563; font-size: 14px; line-height: 1.5;\">\n                                            ${article.json.abstract || '暂无摘要'}\n                                        </p>\n                                        \n                                        <!-- Score and Tags in one line -->\n                                        <div style=\"margin-bottom: 0; display: flex; align-items: center; flex-wrap: wrap; gap: 8px;\">\n                                            <span style=\"display: inline-block; background-color: ${getScoreColor(article.json.score)}; color: #ffffff; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600;\">\n                                                ⭐ 评分: ${article.json.score}\n                                            </span>\n                                            ${formatTags(article.json.tags).split(',').map(tag => `\n                                                <span style=\"display: inline-block; background-color: #ede9fe; color: #7c3aed; padding: 3px 10px; border-radius: 4px; font-size: 12px;\">\n                                                    ${tag.trim()}\n                                                </span>\n                                            `).join('')}\n                                        </div>\n                                    </td>\n                                </tr>\n                            </table>\n                            `).join('')}\n                        </td>\n                    </tr>\n                    \n                    <!-- Footer -->\n                    <tr>\n                        <td style=\"background-color: #f9fafb; padding: 20px; text-align: center; border-radius: 0 0 8px 8px; border-top: 1px solid #e5e7eb;\">\n                            <p style=\"margin: 0; color: #6b7280; font-size: 12px;\">\n                                本邮件由系统自动发送，请勿直接回复\n                            </p>\n                            <p style=\"margin: 10px 0 0 0; color: #9ca3af; font-size: 11px;\">\n                                © ${new Date().getFullYear()} All rights reserved\n                            </p>\n                        </td>\n                    </tr>\n                </table>\n            </td>\n        </tr>\n    </table>\n</body>\n</html>\n  `.trim();\n\n  return htmlContent;\n}\n\n// 生成 HTML\nconst emailHTML = convertToEmailHTML($input.all());\nreturn {\n  \"output\": emailHTML\n}\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1968,
+        0
+      ],
+      "id": "da9db30f-511d-43ac-ad79-299f4870f1dd",
+      "name": "Code1"
+    },
+    {
+      "parameters": {
+        "maxItems": 5
+      },
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        656,
+        0
+      ],
+      "id": "af53ee34-90be-4f19-b89d-892a7f8b32e8",
+      "name": "Limit"
+    }
+  ],
+  "pinData": {
+    "AI Agent": [
+      {
+        "json": {
+          "output": "```json\n{\n  \"title\": \"内置 Claude 下线，TRAE 用户又得换搭档了\",\n  \"abstract\": \"TRAE 官方确认因 Claude 政策调整，已移除内置 Claude 模型支持，尽管提供 GPT-5 和 Gemini-2.5-Pro 等替代模型，并为 Pro 会员推出补偿机制。此举引发用户不满，反映 AI 编码工具生态因模型授权变化而持续动荡，用户被迫重新寻找高效组合。\",\n  \"source\": \"https://juejin.cn/post/7568765712446439478\",\n  \"score\": 78,\n  \"tags\": \"AI coding, Claude, TRAE, GPT-5, Gemini\"\n}\n```"
+        }
+      },
+      {
+        "json": {
+          "output": "```json\n{\n  \"title\": \"量化技术：如何让你的 3D 模型和 AI 模型瘦身又飞快\",\n  \"abstract\": \"本文深入解析量化技术在3D渲染与机器学习中的应用，涵盖均匀与非均匀量化原理，以及Draco和MeshOpt等工具在3D模型压缩中的实战对比，并介绍PyTorch、TensorFlow等框架中的模型量化方法，帮助开发者在保持精度的前提下显著减小模型体积与提升推理效率。\",\n  \"source\": \"https://juejin.cn/post/7568096090763968562\",\n  \"score\": 88,\n  \"tags\": [\n    \"量化技术\",\n    \"3D渲染\",\n    \"机器学习\",\n    \"模型压缩\",\n    \"深度学习\"\n  ]\n}\n```"
+        }
+      },
+      {
+        "json": {
+          "output": "{\n  \"title\": \"LangChain1.0速通指南（一）——LangChain1.0核心升级\",\n  \"abstract\": \"本文系统解析了LangChain 1.0的三大核心升级：全新`create_agent`智能体构建API、标准化内容块（content_blocks）统一多厂商模型接口、以及包结构的全面精简。文章强调LangChain 1.0已从实验性框架演变为生产级工具，其底层基于LangGraph实现，支持持久化、流式响应与人工干预。通过中间件机制和结构化输出优化，显著提升开发效率与功能上限，为AI Agent开发进入标准化时代奠定基础。\",\n  \"source\": \"https://juejin.cn/post/7567301894648004648\",\n  \"score\": 87,\n  \"tags\": \"LangChain, AI Agent, Python, AIGC, Production Ready\"\n}"
+        }
+      },
+      {
+        "json": {
+          "output": "```json\n{\n  \"title\": \"从 Coze 到 n8n：我用 n8n 实现了10w+小林漫画的爆款流水线生产\",\n  \"abstract\": \"本文作者小肥肠通过 n8n 工具构建了一套自动化生成小林漫画风格图文内容的工作流，支持一键生成多张图片并保存至本地磁盘，适用于公众号、小红书、抖音等多平台发布。文章详细拆解了从表单输入到AI生成场景文案、调用通义万相MCP服务绘图、图像处理与文件写入的全流程，实现从0到1的全自动内容流水线生产，帮助创作者高效获取10w+流量。\",\n  \"source\": \"https://juejin.cn/post/7568314115413835814\",\n  \"score\": 88,\n  \"tags\": [\"AIGC\", \"n8n\", \"自动化工作流\", \"AI绘图\", \"内容创作\"]\n}\n```"
+        }
+      },
+      {
+        "json": {
+          "output": "```json\n{\n  \"title\": \"AI领域常见概念一览🎯\",\n  \"abstract\": \"本文系统梳理了AI领域核心概念，涵盖大语言模型（LLM）、Transformer架构、Token、Prompt、Fine-tuning、AI Agent与MCP等关键术语，结合时间线与问答形式，帮助初学者厘清概念边界，尤其深入解析了模型如何通过Prompt与外部工具协作实现智能任务执行。\",\n  \"source\": \"https://juejin.cn/post/7568323565771800612\",\n  \"score\": 87,\n  \"tags\": \"AI, 大语言模型, Transformer, Prompt, AI Agent\"\n}\n```"
+        }
+      }
+    ]
+  },
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        []
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "Limit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send email": {
+      "main": [
+        []
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Code1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code1": {
+      "main": [
+        [
+          {
+            "node": "Send email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limit": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Shanghai",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "55a08404-5f09-4320-a5ca-9136db5953a6",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "291146dd5e272280b20d18634b86174438699c3d1e2afc65ae1cf016fc95dd25"
+  },
+  "id": "MYJjjIJRCIFnl988",
+  "tags": []
+}
